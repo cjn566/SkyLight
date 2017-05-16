@@ -16,7 +16,6 @@
 // Settings
 #define NUM_BOXES_PER_SEXTANT 10
 #define MVMNT_TICK_HZ 30
-//#define ANIM_COUNT (120 * MVMNT_TICK_HZ)
 #define NUM_ANIMS 3
 #define TRANS_TIME 5
 #define FADE_RATE (UINT8_MAX / TRANS_TIME)
@@ -24,15 +23,20 @@
 // Settings - Animations
 //		in to out spectrum
 #define HUE_DIF_COEF 13
-
+uint16_t toSecs(uint16_t in);
 // Variables
 uint16_t animtimer[NUM_ANIMS];
 uint8_t hue = 0;
 uint8_t curr_anim = 1;
-uint16_t anim_reset[3] = { 120 * MVMNT_TICK_HZ,12 * MVMNT_TICK_HZ, 120 * MVMNT_TICK_HZ};
+uint16_t anim_reset[NUM_ANIMS] = { toSecs(10), toSecs(10), toSecs(10)};
 bool transition = false;
 bool trans_fade = true;
 unsigned int trans_count = TRANS_TIME;
+
+
+uint16_t toSecs(uint16_t in){
+	return in * MVMNT_TICK_HZ;
+}	
 
 
 // ANIMATIONS
@@ -78,7 +82,7 @@ public:
 		{
 			box_hue[i] = 0;
 			waiting[i] = true;
-			counter[i] = 400-(20 * i);
+			counter[i] = toSecs(3)-(20 * i);
 		}
 		Serial.println();
 
@@ -96,11 +100,11 @@ public:
 			if (!counter[i]) {
 				if (waiting[i]) {
 					waiting[i] = false;
-					counter[i] = 60;
+					counter[i] = toSecs(2);
 				}
 				else {
 					waiting[i] = true;
-					counter[i] = 400;
+					counter[i] = toSecs(3);
 				}
 			}
 		}
@@ -125,6 +129,10 @@ void setup() {
 
 		animtimer[i]= anim_reset[i];
 	}
+	
+	// Initialize All Leds
+	for (int i = 0; i < SEXTANT_LED_COUNT * 6; i++)
+		leds[i] = CHSV(180, 255, 255);
 }
 
 uint8_t bright = 255;
@@ -138,7 +146,17 @@ void loop() {
 		}
 		FastLED.show();
 		move_gate = false;
+		
+		// Led 0 to red
+		leds[0] = CHSV(0, 255, 255);
+		
+		// Led 0 to yellow
+		leds[1] = CHSV(80, 255, 255);
 
+	
+	
+		/*   <--------- This block comment is just for testing pixel 0 fuckiness. move down when ready to test patterns.
+		
 		// Switch animationsx
 		if (!animtimer[curr_anim]--) {
 			animtimer[curr_anim] = anim_reset[curr_anim];
@@ -165,7 +183,14 @@ void loop() {
 		default:
 			break;
 		}
-		/*
+		
+		// Test dark boxes
+		lightBox(0, 1, CHSV(0, 255, 0));
+		lightBox(2, 1, CHSV(0, 255, 0));
+		lightBox(4, 1, CHSV(0, 255, 0));
+		
+		<-------  block comment starts here
+		
 		// Transition between animations
 		if (transition) {
 			// Fade to half brightness, zero saturation. FADE_RATE * full trans_count = ~256
