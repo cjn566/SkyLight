@@ -25,6 +25,13 @@
 //		in to out spectrum
 #define HUE_DIF_COEF 13
 
+
+// Controller pins
+const int rotEncoderPinA = 9;
+const int rotEncoderPinB = 10;
+const int buttonPin = 11;     // the number of the pushbutton pin
+
+
 // Variables
 uint16_t animtimer[NUM_ANIMS];
 uint8_t hue = 0;
