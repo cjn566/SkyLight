@@ -5,6 +5,12 @@
 #include "WProgram.h"
 #endif
 
+
+// DEBUG MODE???
+const bool DEBUG = true;
+const bool DEBUG_CONTROLLER_INPUT = true;
+
+
 // Directives
 #define USE_OCTOWS2811
 // External Libraries
@@ -13,6 +19,8 @@
 #include "IntervalTimer.h"
 #include "ArtMap.h"
 #include "Skylight.h"
+#include "Bounce2.h"
+
 // Settings
 #define NUM_BOXES_PER_SEXTANT 10
 #define MVMNT_TICK_HZ 30
@@ -27,19 +35,35 @@
 
 
 // Controller pins
+Bounce debouncer1 = Bounce(); 
+
 const int rotEncoderPinA = 9;
 const int rotEncoderPinB = 10;
 const int buttonPin = 11;     // the number of the pushbutton pin
-
+int buttonState = 0;         // variable for reading the pushbutton status
 
 // Variables
 uint16_t animtimer[NUM_ANIMS];
 uint8_t hue = 0;
 uint8_t curr_anim = 1;
-uint16_t anim_reset[3] = { 120 * MVMNT_TICK_HZ,12 * MVMNT_TICK_HZ, 120 * MVMNT_TICK_HZ};
+uint16_t anim_reset[3] = { 120 * MVMNT_TICK_HZ, 12 * MVMNT_TICK_HZ, 120 * MVMNT_TICK_HZ };
 bool transition = false;
 bool trans_fade = true;
 unsigned int trans_count = TRANS_TIME;
+
+
+// Loggers that only log if you have the DEBUG flag set to true
+void log(const char *message) {
+  if(DEBUG) {  
+    Serial.println(message);
+  }
+}
+
+void log(bool message_type, const char *message) {
+  if(message_type) {
+    log(message);
+  }
+}
 
 
 // ANIMATIONS
@@ -87,8 +111,6 @@ public:
 			waiting[i] = true;
 			counter[i] = 400-(20 * i);
 		}
-		Serial.println();
-
 	}
 
 	void go() {
@@ -125,18 +147,45 @@ void setup() {
 	LEDS.addLeds<OCTOWS2811>(ledsraw, SEXTANT_LED_COUNT);
 	mapInit();
 
-	Serial.begin(115200);
+  // set up the controller
+  pinMode(rotEncoderPinA, INPUT);
+  pinMode(rotEncoderPinB, INPUT);
+  pinMode(buttonPin, INPUT);
+
+  debouncer1.attach(buttonPin);
+  debouncer1.interval(5); // interval in ms
+
+  if(DEBUG) {
+    // set up the serial connection to log out to the console.  
+  	Serial.begin(9600);
+  }
+  
 	movement_ticker.begin(mvmntTick, (1000000 / MVMNT_TICK_HZ));
 	for (int i = 0; i < NUM_ANIMS; i++)
 	{
-
 		animtimer[i]= anim_reset[i];
 	}
 }
 
 uint8_t bright = 255;
 
+void get_controller_input() {
+
+
+  // Update the Bounce instance :
+   debouncer1.update();
+   
+   // Call code if Bounce fell (transition from HIGH to LOW) :
+   if ( debouncer1.rose() ) {
+      
+     // Toggle LED state :
+        log(DEBUG_CONTROLLER_INPUT, "the button is pressed"); 
+   }
+}
+
 void loop() {
+  get_controller_input();
+  
 	if (move_gate) {
 		// Convert HSV to RGB
 		for (uint16_t i = 0; i < SEXTANT_LED_COUNT * 6; i++)
@@ -145,7 +194,7 @@ void loop() {
 		}
 		FastLED.show();
 		move_gate = false;
-
+    
 		// Switch animationsx
 		if (!animtimer[curr_anim]--) {
 			animtimer[curr_anim] = anim_reset[curr_anim];
