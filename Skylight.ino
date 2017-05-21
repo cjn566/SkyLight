@@ -13,6 +13,9 @@
 #include "IntervalTimer.h"
 #include "ArtMap.h"
 #include "Skylight.h"
+#include "Bounce2.h"
+#include "Encoder.h"
+
 // Settings
 #define NUM_BOXES_PER_SEXTANT 10
 
@@ -27,6 +30,18 @@
 #define OVERLAY_FADE_TIME 1
 
 #define FADE_START_TIMER toSecs(OVERLAY_FADE_TIME)
+
+// Controller pins
+const int rotEncoderPinA = 9;
+const int rotEncoderPinB = 10;
+const int buttonPin = 11;     // the number of the pushbutton pin
+
+// Controller objects
+Bounce button_debounced = Bounce();
+Encoder RotaryEncoder(rotEncoderPinA, rotEncoderPinB);
+long oldEncoderPosition = -999;
+long newEncoderPosition = 0;
+
 
 // Settings - Animations
 //		in to out spectrum
@@ -45,6 +60,19 @@ unsigned int trans_count = TRANS_TIME;
 uint16_t toSecs(uint16_t in){
 	return in * MVMNT_TICK_HZ;
 }	
+
+// Loggers that only log if you have the DEBUG flag set to true
+void log(const char *message) {
+  if(DEBUG) {  
+    Serial.println(message);
+  }
+}
+
+void log(bool message_type, const char *message) {
+  if(message_type) {
+    log(message);
+  }
+}
 
 
 // ANIMATIONS
@@ -173,7 +201,19 @@ void setup() {
 	LEDS.addLeds<OCTOWS2811>(ledsraw, SEXTANT_LED_COUNT);
 	mapInit();
 
-	Serial.begin(115200);
+  // set up the controller
+  pinMode(rotEncoderPinA, INPUT_PULLUP);
+  pinMode(rotEncoderPinB, INPUT_PULLUP);
+  pinMode(buttonPin, INPUT);
+
+  button_debounced.attach(buttonPin);
+  button_debounced.interval(5); // interval in ms
+
+  if(DEBUG) {
+    // set up the serial connection to log out to the console.  
+  	Serial.begin(9600);
+  }
+  
 	movement_ticker.begin(mvmntTick, (1000000 / MVMNT_TICK_HZ));
 	for (int i = 0; i < NUM_ANIMS; i++)
 	{
@@ -188,7 +228,27 @@ void setup() {
 
 uint8_t bright = 255;
 
+void get_controller_input() {
+  // Update the Bounce instance :
+   button_debounced.update();
+   
+   // Call code if Bounce fell (transition from HIGH to LOW) :
+   if ( button_debounced.rose() ) {
+     log(DEBUG_CONTROLLER_INPUT, "the button is pressed"); 
+   }
+
+  newEncoderPosition = RotaryEncoder.read();
+  if (newEncoderPosition != oldEncoderPosition) {
+    oldEncoderPosition = newEncoderPosition;
+    Serial.println("new position: ");
+    Serial.println(newEncoderPosition);
+  }
+}
+
 void loop() {
+	
+  get_controller_input();
+  
 	if (move_gate) {
 		// Convert HSV to RGB
 		for (uint16_t i = 0; i < SEXTANT_LED_COUNT * 6; i++)
