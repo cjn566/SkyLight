@@ -20,6 +20,7 @@ const bool DEBUG_CONTROLLER_INPUT = true;
 #include "ArtMap.h"
 #include "Skylight.h"
 #include "Bounce2.h"
+#include "Encoder.h"
 
 // Settings
 #define NUM_BOXES_PER_SEXTANT 10
@@ -35,12 +36,17 @@ const bool DEBUG_CONTROLLER_INPUT = true;
 
 
 // Controller pins
-Bounce debouncer1 = Bounce(); 
-
 const int rotEncoderPinA = 9;
 const int rotEncoderPinB = 10;
 const int buttonPin = 11;     // the number of the pushbutton pin
-int buttonState = 0;         // variable for reading the pushbutton status
+
+
+// Controller objects
+Bounce button_debounced = Bounce(); 
+Encoder RotaryEncoder(rotEncoderPinA, rotEncoderPinB);
+long oldEncoderPosition = -999;
+long newEncoderPosition = 0;
+
 
 // Variables
 uint16_t animtimer[NUM_ANIMS];
@@ -148,12 +154,12 @@ void setup() {
 	mapInit();
 
   // set up the controller
-  pinMode(rotEncoderPinA, INPUT);
-  pinMode(rotEncoderPinB, INPUT);
+  pinMode(rotEncoderPinA, INPUT_PULLUP);
+  pinMode(rotEncoderPinB, INPUT_PULLUP);
   pinMode(buttonPin, INPUT);
 
-  debouncer1.attach(buttonPin);
-  debouncer1.interval(5); // interval in ms
+  button_debounced.attach(buttonPin);
+  button_debounced.interval(5); // interval in ms
 
   if(DEBUG) {
     // set up the serial connection to log out to the console.  
@@ -170,17 +176,20 @@ void setup() {
 uint8_t bright = 255;
 
 void get_controller_input() {
-
-
   // Update the Bounce instance :
-   debouncer1.update();
+   button_debounced.update();
    
    // Call code if Bounce fell (transition from HIGH to LOW) :
-   if ( debouncer1.rose() ) {
-      
-     // Toggle LED state :
-        log(DEBUG_CONTROLLER_INPUT, "the button is pressed"); 
+   if ( button_debounced.rose() ) {
+     log(DEBUG_CONTROLLER_INPUT, "the button is pressed"); 
    }
+
+  newEncoderPosition = RotaryEncoder.read();
+  if (newEncoderPosition != oldEncoderPosition) {
+    oldEncoderPosition = newEncoderPosition;
+    Serial.println("new position: ");
+    Serial.println(newEncoderPosition);
+  }
 }
 
 void loop() {
