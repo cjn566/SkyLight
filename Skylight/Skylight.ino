@@ -237,13 +237,12 @@ void loop() {
 		default:
 			break;
 		}
-		
+	/*	
 		// Test dark boxes
 		lightBox(0, 1, CHSV(0, 255, 0));
 		lightBox(2, 1, CHSV(0, 255, 0));
 		lightBox(4, 1, CHSV(0, 255, 0));
 		
-		<-------  block comment starts here
 		
 		// Transition between animations
 		if (transition) {
