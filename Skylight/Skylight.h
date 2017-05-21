@@ -9,6 +9,7 @@ IntervalTimer movement_ticker;				// Timer to keep things a-ticking
 CRGB ledsraw[6 * SEXTANT_LED_COUNT];	// Data structure for all LEDs
 CHSV leds[6 * SEXTANT_LED_COUNT];
 
+
 // Interrupt handler for gating all timed events
 void mvmntTick() {
 	if (move_gate) {
