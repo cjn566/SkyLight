@@ -26,7 +26,7 @@ const bool DEBUG_CONTROLLER_INPUT = true;
 #define NUM_BOXES NUM_BOXES_PER_SEXTANT*6+1
 
 #define MVMNT_TICK_HZ 30
-#define NUM_ANIMS 3
+#define NUM_ANIMS 4
 #define TRANS_TIME 5
 #define FADE_RATE (UINT8_MAX / TRANS_TIME)
 
@@ -67,8 +67,8 @@ uint16_t toSecs(uint16_t in);
 // Variables
 uint16_t animtimer[NUM_ANIMS];
 uint8_t hue = 0;
-uint8_t curr_anim = 1;
-uint16_t anim_reset[NUM_ANIMS] = { toSecs(10), toSecs(10), toSecs(10)};
+uint8_t curr_anim = 0;
+uint16_t anim_reset[NUM_ANIMS] = { toSecs(2), toSecs(2), toSecs(2),  toSecs(2) };
 bool transition = false;
 bool trans_fade = true;
 unsigned int trans_count = TRANS_TIME;
@@ -324,16 +324,22 @@ void loop() {
 		switch (curr_anim)
 		{
 		case 0: 
+      Serial.println("case0");
 			in_out_rainbow();
 			//Serial.print("0 - "); //debug
 			break;
 		case 1: 
+      Serial.println("case1");
 			radar.go();
 			//Serial.print("1 - "); //debug
 			break;
 		case 2:
+      Serial.println("case2");
 			breathe.go();
 			break;
+    case 3:
+      Serial.println("run the rainbow!");
+      break;
 		default:
 			break;
 		}
