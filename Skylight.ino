@@ -14,7 +14,12 @@
 #include "ArtMap.h"
 #include "Skylight.h"
 #include "Bounce2.h"
-#include "Encoder.h"
+// #include "Encoder.h"
+
+// DEBUG MODE???
+const bool DEBUG = true;
+const bool DEBUG_CONTROLLER_INPUT = true;
+
 
 // Settings
 #define NUM_BOXES_PER_SEXTANT 10
@@ -29,6 +34,12 @@
 #define OVERLAY_WAIT_TIME 4
 #define OVERLAY_FADE_TIME 1
 
+
+// Utils
+uint16_t toSecs(uint16_t in){
+  return in * MVMNT_TICK_HZ;
+} 
+
 #define FADE_START_TIMER toSecs(OVERLAY_FADE_TIME)
 
 // Controller pins
@@ -38,7 +49,7 @@ const int buttonPin = 11;     // the number of the pushbutton pin
 
 // Controller objects
 Bounce button_debounced = Bounce();
-Encoder RotaryEncoder(rotEncoderPinA, rotEncoderPinB);
+// Encoder RotaryEncoder(rotEncoderPinA, rotEncoderPinB);
 long oldEncoderPosition = -999;
 long newEncoderPosition = 0;
 
@@ -56,10 +67,6 @@ bool transition = false;
 bool trans_fade = true;
 unsigned int trans_count = TRANS_TIME;
 
-
-uint16_t toSecs(uint16_t in){
-	return in * MVMNT_TICK_HZ;
-}	
 
 // Loggers that only log if you have the DEBUG flag set to true
 void log(const char *message) {
@@ -235,9 +242,10 @@ void get_controller_input() {
    // Call code if Bounce fell (transition from HIGH to LOW) :
    if ( button_debounced.rose() ) {
      log(DEBUG_CONTROLLER_INPUT, "the button is pressed"); 
+     injector.inject();
    }
 
-  newEncoderPosition = RotaryEncoder.read();
+  // newEncoderPosition = RotaryEncoder.read();
   if (newEncoderPosition != oldEncoderPosition) {
     oldEncoderPosition = newEncoderPosition;
     Serial.println("new position: ");

@@ -33,14 +33,13 @@ void lightBox(int sextant, int box, CHSV color) {
 
 	// Ad Hoc fix for central box being in all six quadrants
 	if (box == 0) {
-		for (int s = 0; s < 6; s++)
+		for (int s = 0; s < 6; s++) {
 			for (int i = shape_start_addr[s][0]; i < shape_start_addr[s][1]; i++)
 			{
 				leds[i] = color;
 			}
 		}
-	}
-	else {
+	} else {
 		// Determine if this is to light all sextants or just one.
 		for (int s = (sextant == ALL_SEXTANTS ? 0 : sextant); s <= (sextant == ALL_SEXTANTS ? 5 : sextant); s++)
 		{
