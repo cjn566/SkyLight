@@ -9,12 +9,11 @@
 #define USE_OCTOWS2811
 // External Libraries
 #include "OctoWS2811.h"
-#include "FastLED.h"
+#include "FastLED/FastLED.h"
 #include "IntervalTimer.h"
 #include "ArtMap.h"
 #include "Skylight.h"
 #include "Bounce2.h"
-// #include "Encoder.h"
 
 // DEBUG MODE???
 const bool DEBUG = true;
@@ -47,12 +46,19 @@ const int rotEncoderPinA = 9;
 const int rotEncoderPinB = 10;
 const int buttonPin = 11;     // the number of the pushbutton pin
 
-// Controller objects
+// button objects
 Bounce button_debounced = Bounce();
-// Encoder RotaryEncoder(rotEncoderPinA, rotEncoderPinB);
-long oldEncoderPosition = -999;
-long newEncoderPosition = 0;
 
+/*
+// Rotary Encoder Data
+static int rotaryEncoderPinA = 9; // Our first hardware interrupt pin is digital pin 2
+static int rotaryEncoderPinB = 10; // Our second hardware interrupt pin is digital pin 3
+volatile byte aFlag = 0; // let's us know when we're expecting a rising edge on pinA to signal that the encoder has arrived at a detent
+volatile byte bFlag = 0; // let's us know when we're expecting a rising edge on pinB to signal that the encoder has arrived at a detent (opposite direction to when aFlag is set)
+volatile byte encoderPos = 0; //this variable stores our current value of encoder position. Change to int or uin16_t instead of byte if you want to record a larger range than 0-255
+volatile byte oldEncPos = 99; //stores the last encoder position value so we can compare to the current reading and see if it has changed (so we know when to print to the serial monitor)
+volatile byte reading = 0; //somewhere to store the direct values we read from our interrupt pins before checking to see if we have moved a whole detent
+*/
 
 // Settings - Animations
 //		in to out spectrum
@@ -81,6 +87,33 @@ void log(bool message_type, const char *message) {
   }
 }
 
+/*
+void RotaryEncoderPinAInterrupt(){
+  cli(); //stop interrupts happening before we read pin values
+  Serial.println("in pin A interrupt");
+  reading = PIND & 0xC; // read all eight pin values then strip away all but pinA and pinB's values
+  if(reading == B00001100 && aFlag) { //check that we have both pins at detent (HIGH) and that we are expecting detent on this pin's rising edge
+    encoderPos --; //decrement the encoder's position count
+    bFlag = 0; //reset flags for the next turn
+    aFlag = 0; //reset flags for the next turn
+  }
+  else if (reading == B00000100) bFlag = 1; //signal that we're expecting pinB to signal the transition to detent from free rotation
+  sei(); //restart interrupts
+}
+
+void RotaryEncoderPinBInterrupt(){
+  cli(); //stop interrupts happening before we read pin values
+  Serial.println("in pin B interrupt");
+  reading = PIND & 0xC; //read all eight pin values then strip away all but pinA and pinB's values
+  if (reading == B00001100 && bFlag) { //check that we have both pins at detent (HIGH) and that we are expecting detent on this pin's rising edge
+    encoderPos ++; //increment the encoder's position count
+    bFlag = 0; //reset flags for the next turn
+    aFlag = 0; //reset flags for the next turn
+  }
+  else if (reading == B00001000) aFlag = 1; //signal that we're expecting pinA to signal the transition to detent from free rotation
+  sei(); //restart interrupts
+}
+*/
 
 // ANIMATIONS
 void in_out_rainbow() {
@@ -90,6 +123,8 @@ void in_out_rainbow() {
 	}
 	hue++;
 }
+
+
 
 //void 
 class Radar {
@@ -116,6 +151,8 @@ private:
 	uint8_t hue = 0;
 	uint8_t countdown = cd_reset;
 };
+
+
 
 class Breathe {
 public:
@@ -157,6 +194,8 @@ private:
 	uint16_t counter[11]; 
 	bool waiting[11];
 };
+
+
 
 class ColorInjector
 {
@@ -208,13 +247,18 @@ void setup() {
 	LEDS.addLeds<OCTOWS2811>(ledsraw, SEXTANT_LED_COUNT);
 	mapInit();
 
-  // set up the controller
-  pinMode(rotEncoderPinA, INPUT_PULLUP);
-  pinMode(rotEncoderPinB, INPUT_PULLUP);
+  // set up the button.
   pinMode(buttonPin, INPUT);
-
   button_debounced.attach(buttonPin);
   button_debounced.interval(5); // interval in ms
+
+/*
+  // set up the rotary encoder...
+  pinMode(rotaryEncoderPinA, INPUT_PULLUP); // set pinA as an input, pulled HIGH to the logic voltage (5V or 3.3V for most cases)
+  pinMode(rotaryEncoderPinB, INPUT_PULLUP); // set pinB as an input, pulled HIGH to the logic voltage (5V or 3.3V for most cases)
+  attachInterrupt(0,RotaryEncoderPinAInterrupt,RISING); // set an interrupt on PinA, looking for a rising edge signal and executing the "PinA" Interrupt Service Routine (below)
+  attachInterrupt(1,RotaryEncoderPinBInterrupt,RISING); // set an interrupt on PinB, looking for a rising edge signal and executing the "PinB" Interrupt Service Routine (below)
+*/
 
   if(DEBUG) {
     // set up the serial connection to log out to the console.  
@@ -245,17 +289,18 @@ void get_controller_input() {
      injector.inject();
    }
 
-  // newEncoderPosition = RotaryEncoder.read();
-  if (newEncoderPosition != oldEncoderPosition) {
-    oldEncoderPosition = newEncoderPosition;
-    Serial.println("new position: ");
-    Serial.println(newEncoderPosition);
+  /*
+  if(oldEncPos != encoderPos) {
+    Serial.println(encoderPos);
+    oldEncPos = encoderPos;
   }
+  */
+  
 }
 
 void loop() {
 	
-  get_controller_input();
+  // get_controller_input();
   
 	if (move_gate) {
 		// Convert HSV to RGB
@@ -265,17 +310,6 @@ void loop() {
 		}
 		FastLED.show();
 		move_gate = false;
-		
-		/*
-		// Led 0 to red
-		leds[0] = CHSV(0, 255, 255);
-		
-		// Led 0 to yellow
-		leds[1] = CHSV(80, 255, 255);
-
-	
-	
-		*///   <--------- This block comment is just for testing pixel 0 fuckiness. move down when ready to test patterns.
 		
 		// Switch animationsx
 		if (!animtimer[curr_anim]--) {
