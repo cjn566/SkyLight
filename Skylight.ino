@@ -26,7 +26,7 @@ const bool DEBUG_CONTROLLER_INPUT = true;
 #define NUM_BOXES NUM_BOXES_PER_SEXTANT*6+1
 
 #define MVMNT_TICK_HZ 30
-#define NUM_ANIMS 4
+#define NUM_ANIMS 5
 #define TRANS_TIME 5
 #define FADE_RATE (UINT8_MAX / TRANS_TIME)
 
@@ -66,7 +66,7 @@ uint16_t toSecs(uint16_t in);
 uint16_t animtimer[NUM_ANIMS];
 uint8_t hue = 0;
 uint8_t curr_anim = 0;
-uint16_t anim_reset[NUM_ANIMS] = { toSecs(20), toSecs(20), toSecs(20),  toSecs(40) };
+uint16_t anim_reset[NUM_ANIMS] = { toSecs(30), toSecs(20), toSecs(30), toSecs(30),  toSecs(30) };
 bool transition = false;
 bool trans_fade = true;
 unsigned int trans_count = TRANS_TIME;
@@ -168,6 +168,52 @@ private:
   CHSV rainbowColors[256]; // use length equal to colors_in_rainbow
 };
 
+
+
+class SecondDiagonalRainbow {
+public:
+  SecondDiagonalRainbow() {}
+  void go() {
+    color_index++;
+    if(color_index >= colors_in_rainbow) {
+      color_index = 0; // reset if we've gone through the colors
+    }
+
+    for (sextant_index=0; sextant_index < 6; sextant_index++) {
+      color_offset = sextant_index * colorShift;
+      for (pixel_index_in_sextant=0; pixel_index_in_sextant < SEXTANT_LED_COUNT; pixel_index_in_sextant++) {
+
+          pixel_address = pixel_index_in_sextant + (sextant_index*SEXTANT_LED_COUNT);
+          color_index_with_offset = (color_index + color_offset) % colors_in_rainbow;
+
+          leds[pixel_address] = rainbowColors[color_index_with_offset];
+      }
+    }
+    // FastLED.show();
+  }
+
+  void setup() {
+    for (int i=0; i<colors_in_rainbow; i++) {
+      int hue = i * 2;
+      // pre-compute the 'colors_in_rainbow' (180 as of now) rainbow colors
+      rainbowColors[i] = CHSV(hue, 255, 255);
+    }
+  }
+private:
+  const uint8_t colorShift = 60; // how many pixels diagonal should we go per sextant?
+  const uint16_t cycleTime = 2800;
+  const int colors_in_rainbow = 256;
+
+  uint16_t pixel_index_in_sextant;
+  uint8_t sextant_index;
+  uint8_t color_offset;
+
+  uint16_t pixel_address;
+  uint16_t color_index_with_offset;
+  
+  uint16_t color_index = 0;
+  CHSV rainbowColors[256]; // use length equal to colors_in_rainbow
+};
 
 
 
@@ -295,6 +341,7 @@ ColorInjector injector;
 Radar radar;
 Breathe breathe;
 DiagonalRainbow diagonal_rainbow;
+SecondDiagonalRainbow second_diagonal_rainbow;
 
 void setup() {
 	LEDS.addLeds<OCTOWS2811>(ledsraw, SEXTANT_LED_COUNT);
@@ -324,6 +371,7 @@ void setup() {
 	}
 
   diagonal_rainbow.setup();
+  second_diagonal_rainbow.setup();
 	
 	// Initialize All Leds
 	for (int i = 0; i < SEXTANT_LED_COUNT * 6; i++) {
@@ -370,7 +418,7 @@ void loop() {
 		if (!animtimer[curr_anim]--) {
 			animtimer[curr_anim] = anim_reset[curr_anim];
 			curr_anim = (curr_anim + 1) % NUM_ANIMS;
-			if (curr_anim == 2)
+			if (curr_anim == 3)
 				breathe.start();
 		}
 
@@ -382,10 +430,13 @@ void loop() {
 		case 1: 
 			radar.go();
 			break;
-		case 2:
+    case 2:
+      second_diagonal_rainbow.go();
+      break;
+		case 3:
 			breathe.go();
 			break;
-    case 3:
+    case 4:
       diagonal_rainbow.go();
       break;
 		default:
